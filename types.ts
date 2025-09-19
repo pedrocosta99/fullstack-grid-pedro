@@ -8,13 +8,31 @@ export const toCellAddress = (addr: string): CellAddress => {
 };
 
 export const parseCellAddress = (addr: CellAddress): { col: number; row: number } => {
-  // TODO: Parse "A1" -> { col: 0, row: 0 }
-  throw new Error('Not implemented');
+  const match = addr.match(/^([A-Z]+)(\d+)$/);
+  if (!match) {
+    throw new Error(`Invalid cell address: ${addr}`);
+  }
+
+  const [, letters, rowStr] = match;
+  let col = 0;
+  for (let i = 0; i < letters.length; i++) {
+    col = col * 26 + (letters.charCodeAt(i) - 65 + 1);
+  }
+
+  return {
+    col: col - 1,
+    row: parseInt(rowStr) - 1
+  };
 };
 
 export const formatCellAddress = (col: number, row: number): CellAddress => {
-  // TODO: Format { col: 0, row: 0 } -> "A1"
-  throw new Error('Not implemented');
+  let result = '';
+  let colIndex = col;
+  while (colIndex >= 0) {
+    result = String.fromCharCode(65 + (colIndex % 26)) + result;
+    colIndex = Math.floor(colIndex / 26) - 1;
+  }
+  return toCellAddress(result + (row + 1));
 };
 
 // Cell types (discriminated union)

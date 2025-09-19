@@ -15,7 +15,9 @@ export const CellEditSchema = z.object({
 });
 
 export const SheetPatchSchema = z.object({
-  edits: z.array(CellEditSchema).min(1).max(1000)
+  edits: z.array(CellEditSchema).min(1).max(1000).optional(),
+  rows: z.number().int().min(1).max(1000).optional(),
+  cols: z.number().int().min(1).max(100).optional()
 });
 
 export const EvalRequestSchema = z.object({

@@ -1,4 +1,5 @@
 import { Sheet, Cell, CellAddress, toCellAddress } from '@/types';
+import { parseFormula } from './parser';
 
 // Create the seed sheet with initial data
 export function createSeedSheet(): Sheet {
@@ -19,54 +20,121 @@ export function createSeedSheet(): Sheet {
   // Add data rows
   sheet.cells[toCellAddress('A3')] = { kind: 'literal', value: 1000 };
   sheet.cells[toCellAddress('B3')] = { kind: 'literal', value: 300 };
-  sheet.cells[toCellAddress('C3')] = { 
-    kind: 'formula', 
+  sheet.cells[toCellAddress('C3')] = {
+    kind: 'formula',
     src: '=A3-B3',
-    ast: null as any // TODO: Parse this formula
+    ast: parseFormula('=A3-B3')
   };
 
   sheet.cells[toCellAddress('A4')] = { kind: 'literal', value: 2000 };
   sheet.cells[toCellAddress('B4')] = { kind: 'literal', value: 1250 };
-  sheet.cells[toCellAddress('C4')] = { 
-    kind: 'formula', 
+  sheet.cells[toCellAddress('C4')] = {
+    kind: 'formula',
     src: '=A4-B4',
-    ast: null as any // TODO: Parse this formula
+    ast: parseFormula('=A4-B4')
   };
 
   // Add sum row
-  sheet.cells[toCellAddress('A5')] = { 
-    kind: 'formula', 
+  sheet.cells[toCellAddress('A5')] = {
+    kind: 'formula',
     src: '=SUM(A3:A4)',
-    ast: null as any // TODO: Parse this formula
+    ast: parseFormula('=SUM(A3:A4)')
   };
-  sheet.cells[toCellAddress('B5')] = { 
-    kind: 'formula', 
+  sheet.cells[toCellAddress('B5')] = {
+    kind: 'formula',
     src: '=SUM(B3:B4)',
-    ast: null as any // TODO: Parse this formula
+    ast: parseFormula('=SUM(B3:B4)')
   };
-  sheet.cells[toCellAddress('C5')] = { 
-    kind: 'formula', 
+  sheet.cells[toCellAddress('C5')] = {
+    kind: 'formula',
     src: '=SUM(C3:C4)',
-    ast: null as any // TODO: Parse this formula
+    ast: parseFormula('=SUM(C3:C4)')
   };
 
   // Add subtle trap: absolute reference
-  sheet.cells[toCellAddress('D3')] = { 
-    kind: 'formula', 
+  sheet.cells[toCellAddress('D3')] = {
+    kind: 'formula',
     src: '=A3-B$3',  // Absolute row reference
-    ast: null as any // TODO: Parse this formula
+    ast: parseFormula('=A3-B$3')
   };
 
   // Hidden cycle trap (out of initial viewport)
-  sheet.cells[toCellAddress('C6')] = { 
-    kind: 'formula', 
+  sheet.cells[toCellAddress('C6')] = {
+    kind: 'formula',
     src: '=C7+1',
-    ast: null as any // TODO: Parse this formula
+    ast: parseFormula('=C7+1')
   };
-  sheet.cells[toCellAddress('C7')] = { 
-    kind: 'formula', 
+  sheet.cells[toCellAddress('C7')] = {
+    kind: 'formula',
     src: '=C6+1',  // Creates a cycle with C6
-    ast: null as any // TODO: Parse this formula
+    ast: parseFormula('=C6+1')
+  };
+
+  // Formula test area - testing all 7 functions
+  sheet.cells[toCellAddress('F1')] = { kind: 'literal', value: 'Formula Tests' };
+
+  // Test data for formulas
+  sheet.cells[toCellAddress('E3')] = { kind: 'literal', value: 10 };
+  sheet.cells[toCellAddress('E4')] = { kind: 'literal', value: 20 };
+  sheet.cells[toCellAddress('E5')] = { kind: 'literal', value: 30 };
+  sheet.cells[toCellAddress('E6')] = { kind: 'literal', value: 5 };
+
+  // SUM test
+  sheet.cells[toCellAddress('F3')] = { kind: 'literal', value: 'SUM:' };
+  sheet.cells[toCellAddress('G3')] = {
+    kind: 'formula',
+    src: '=SUM(E3:E5)',
+    ast: parseFormula('=SUM(E3:E5)')
+  };
+
+  // AVERAGE test
+  sheet.cells[toCellAddress('F4')] = { kind: 'literal', value: 'AVG:' };
+  sheet.cells[toCellAddress('G4')] = {
+    kind: 'formula',
+    src: '=AVERAGE(E3:E5)',
+    ast: parseFormula('=AVERAGE(E3:E5)')
+  };
+
+  // COUNT test
+  sheet.cells[toCellAddress('F5')] = { kind: 'literal', value: 'COUNT:' };
+  sheet.cells[toCellAddress('G5')] = {
+    kind: 'formula',
+    src: '=COUNT(E3:E6)',
+    ast: parseFormula('=COUNT(E3:E6)')
+  };
+
+  // MIN test
+  sheet.cells[toCellAddress('F6')] = { kind: 'literal', value: 'MIN:' };
+  sheet.cells[toCellAddress('G6')] = {
+    kind: 'formula',
+    src: '=MIN(E3:E6)',
+    ast: parseFormula('=MIN(E3:E6)')
+  };
+
+  // MAX test
+  sheet.cells[toCellAddress('F7')] = { kind: 'literal', value: 'MAX:' };
+  sheet.cells[toCellAddress('G7')] = {
+    kind: 'formula',
+    src: '=MAX(E3:E6)',
+    ast: parseFormula('=MAX(E3:E6)')
+  };
+
+  // IF test
+  sheet.cells[toCellAddress('F8')] = { kind: 'literal', value: 'IF:' };
+  sheet.cells[toCellAddress('G8')] = {
+    kind: 'formula',
+    src: '=IF(E3>15,"High","Low")',
+    ast: parseFormula('=IF(E3>15,"High","Low")')
+  };
+
+  // CONCAT test
+  sheet.cells[toCellAddress('F9')] = { kind: 'literal', value: 'CONCAT:' };
+  sheet.cells[toCellAddress('E9')] = { kind: 'literal', value: 'Hello' };
+  sheet.cells[toCellAddress('E10')] = { kind: 'literal', value: 'World' };
+  sheet.cells[toCellAddress('G9')] = {
+    kind: 'formula',
+    src: '=CONCAT(E9," ",E10)',
+    ast: parseFormula('=CONCAT(E9," ",E10)')
   };
 
   return sheet;

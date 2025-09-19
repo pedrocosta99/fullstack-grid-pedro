@@ -56,35 +56,45 @@ export async function PATCH(
       );
     }
 
-    const { edits } = validation.data;
-    
-    // Apply each edit to the sheet
-    for (const edit of edits) {
-      const addr = toCellAddress(edit.addr);
-      
-      if (edit.kind === 'clear') {
-        delete sheet.cells[addr];
-      } else if (edit.kind === 'literal') {
-        sheet.cells[addr] = {
-          kind: 'literal',
-          value: edit.value!
-        };
-      } else if (edit.kind === 'formula') {
-        // TODO: Parse formula and create AST
-        try {
-          const ast = parseFormula(edit.formula!);
+    const { edits, rows, cols } = validation.data;
+
+    // Update sheet dimensions if provided
+    if (rows !== undefined) {
+      sheet.rows = rows;
+    }
+    if (cols !== undefined) {
+      sheet.cols = cols;
+    }
+
+    // Apply each edit to the sheet if edits are provided
+    if (edits) {
+      for (const edit of edits) {
+        const addr = toCellAddress(edit.addr);
+
+        if (edit.kind === 'clear') {
+          delete sheet.cells[addr];
+        } else if (edit.kind === 'literal') {
           sheet.cells[addr] = {
-            kind: 'formula',
-            src: edit.formula!,
-            ast
+            kind: 'literal',
+            value: edit.value!
           };
-        } catch (error) {
-          // If parsing fails, store as error cell
-          sheet.cells[addr] = {
-            kind: 'error',
-            code: 'PARSE',
-            message: `Invalid formula: ${edit.formula}`
-          };
+        } else if (edit.kind === 'formula') {
+          // TODO: Parse formula and create AST
+          try {
+            const ast = parseFormula(edit.formula!);
+            sheet.cells[addr] = {
+              kind: 'formula',
+              src: edit.formula!,
+              ast
+            };
+          } catch (error) {
+            // If parsing fails, store as formula with null AST to preserve the original text
+            sheet.cells[addr] = {
+              kind: 'formula',
+              src: edit.formula!,
+              ast: null
+            };
+          }
         }
       }
     }

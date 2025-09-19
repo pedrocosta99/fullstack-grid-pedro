@@ -30,16 +30,179 @@ export class Lexer {
   }
 
   nextToken(): Token {
-    // TODO: Implement tokenization
-    // Skip whitespace
-    // Recognize numbers, strings (quoted), cell refs (A1, $A$1), 
-    // ranges (A1:B2), functions (SUM, AVG, etc), operators
-    throw new Error('Lexer not implemented');
+    this.skipWhitespace();
+
+    if (this.pos >= this.input.length) {
+      return { type: 'EOF', value: '', pos: this.pos };
+    }
+
+    const char = this.input[this.pos];
+
+    // Numbers
+    if (this.isDigit(char) || char === '.') {
+      return this.readNumber();
+    }
+
+    // Strings
+    if (char === '"') {
+      return this.readString();
+    }
+
+    // Cell references and functions
+    if (this.isLetter(char)) {
+      return this.readIdentifier();
+    }
+
+    // Operators and punctuation
+    switch (char) {
+      case '+':
+      case '-':
+      case '*':
+      case '/':
+      case '^':
+        return this.readOperator();
+      case '(':
+        this.pos++;
+        return { type: 'LPAREN', value: '(', pos: this.pos - 1 };
+      case ')':
+        this.pos++;
+        return { type: 'RPAREN', value: ')', pos: this.pos - 1 };
+      case ',':
+        this.pos++;
+        return { type: 'COMMA', value: ',', pos: this.pos - 1 };
+      case ':':
+        this.pos++;
+        return { type: 'COLON', value: ':', pos: this.pos - 1 };
+      case '=':
+        return this.readComparison();
+      case '<':
+        return this.readComparison();
+      case '>':
+        return this.readComparison();
+      default:
+        throw new Error(`Unexpected character: ${char} at position ${this.pos}`);
+    }
+  }
+
+  private skipWhitespace(): void {
+    while (this.pos < this.input.length && /\s/.test(this.input[this.pos])) {
+      this.pos++;
+    }
+  }
+
+  private isDigit(char: string): boolean {
+    return /[0-9]/.test(char);
+  }
+
+  private isLetter(char: string): boolean {
+    return /[A-Za-z]/.test(char);
+  }
+
+  private readNumber(): Token {
+    const start = this.pos;
+    let hasDot = false;
+
+    while (this.pos < this.input.length) {
+      const char = this.input[this.pos];
+      if (this.isDigit(char)) {
+        this.pos++;
+      } else if (char === '.' && !hasDot) {
+        hasDot = true;
+        this.pos++;
+      } else {
+        break;
+      }
+    }
+
+    return {
+      type: 'NUMBER',
+      value: this.input.slice(start, this.pos),
+      pos: start
+    };
+  }
+
+  private readString(): Token {
+    const start = this.pos;
+    this.pos++; // Skip opening quote
+
+    while (this.pos < this.input.length && this.input[this.pos] !== '"') {
+      this.pos++;
+    }
+
+    if (this.pos >= this.input.length) {
+      throw new Error('Unterminated string');
+    }
+
+    this.pos++; // Skip closing quote
+
+    return {
+      type: 'STRING',
+      value: this.input.slice(start + 1, this.pos - 1),
+      pos: start
+    };
+  }
+
+  private readIdentifier(): Token {
+    const start = this.pos;
+
+    // Read letters and numbers for cell refs or function names
+    while (this.pos < this.input.length &&
+           (this.isLetter(this.input[this.pos]) ||
+            this.isDigit(this.input[this.pos]) ||
+            this.input[this.pos] === '$')) {
+      this.pos++;
+    }
+
+    const value = this.input.slice(start, this.pos);
+
+    // Check if this looks like a cell reference (e.g., A1, a1, $A$1)
+    if (/^(\$?[A-Za-z]+\$?\d+)$/.test(value)) {
+      return { type: 'CELL_REF', value: value.toUpperCase(), pos: start };
+    }
+
+    // Otherwise it's a function name
+    return { type: 'FUNCTION', value: value.toUpperCase(), pos: start };
+  }
+
+  private readOperator(): Token {
+    const start = this.pos;
+    const char = this.input[this.pos];
+    this.pos++;
+
+    return {
+      type: 'OPERATOR',
+      value: char,
+      pos: start
+    };
+  }
+
+  private readComparison(): Token {
+    const start = this.pos;
+    const char = this.input[this.pos];
+    this.pos++;
+
+    // Check for two-character operators
+    if (char === '<' && this.pos < this.input.length && this.input[this.pos] === '>') {
+      this.pos++;
+      return { type: 'OPERATOR', value: '<>', pos: start };
+    }
+    if (char === '<' && this.pos < this.input.length && this.input[this.pos] === '=') {
+      this.pos++;
+      return { type: 'OPERATOR', value: '<=', pos: start };
+    }
+    if (char === '>' && this.pos < this.input.length && this.input[this.pos] === '=') {
+      this.pos++;
+      return { type: 'OPERATOR', value: '>=', pos: start };
+    }
+
+    return { type: 'OPERATOR', value: char, pos: start };
   }
 
   peek(): Token {
-    // TODO: Look ahead without consuming
-    throw new Error('Not implemented');
+    const savedPos = this.pos;
+    const token = this.nextToken();
+    this.pos = savedPos;
+    return token;
   }
 }
 
@@ -54,25 +217,172 @@ export class Parser {
   }
 
   parse(): FormulaAst {
-    // TODO: Implement recursive descent or Pratt parser
-    // Handle precedence: ^ > */ > +- > comparisons
-    // Support parentheses for grouping
-    throw new Error('Parser not implemented');
+    return this.parseExpression();
   }
 
   private parseExpression(minPrecedence: number = 0): FormulaAst {
-    // TODO: Main expression parsing with precedence climbing
-    throw new Error('Not implemented');
+    let left = this.parsePrimary();
+
+    while (this.current.type === 'OPERATOR' && this.getOperatorPrecedence(this.current.value) >= minPrecedence) {
+      const operator = this.current.value;
+      const precedence = this.getOperatorPrecedence(operator);
+      this.advance();
+
+      const right = this.parseExpression(precedence + 1);
+
+      left = {
+        type: 'binary',
+        op: operator as any,
+        left,
+        right
+      };
+    }
+
+    return left;
+  }
+
+  private getOperatorPrecedence(op: string): number {
+    return PRECEDENCE[op] || 0;
   }
 
   private parsePrimary(): FormulaAst {
-    // TODO: Parse literals, cell refs, function calls, parenthesized expressions
-    throw new Error('Not implemented');
+    // Handle unary minus
+    if (this.current.type === 'OPERATOR' && this.current.value === '-') {
+      this.advance();
+      const operand = this.parsePrimary();
+      return {
+        type: 'unary',
+        op: '-',
+        operand
+      };
+    }
+
+    // Parenthesized expressions
+    if (this.current.type === 'LPAREN') {
+      this.advance();
+      const expr = this.parseExpression();
+      this.expect('RPAREN');
+      return expr;
+    }
+
+    // Numbers
+    if (this.current.type === 'NUMBER') {
+      const value = parseFloat(this.current.value);
+      this.advance();
+      return {
+        type: 'number',
+        value
+      };
+    }
+
+    // Strings
+    if (this.current.type === 'STRING') {
+      const value = this.current.value;
+      this.advance();
+      return {
+        type: 'string',
+        value
+      };
+    }
+
+    // Cell references or ranges
+    if (this.current.type === 'CELL_REF') {
+      const cellRef = this.current.value;
+      this.advance();
+
+      // Check if this is a range (A1:B2)
+      if (this.current.type === 'COLON') {
+        this.advance();
+        if (this.current.type !== 'CELL_REF') {
+          throw new Error('Expected cell reference after colon');
+        }
+        const endRef = this.current.value;
+        this.advance();
+
+        return {
+          type: 'range',
+          start: toCellAddress(cellRef),
+          end: toCellAddress(endRef)
+        };
+      }
+
+      // Parse absolute/relative references
+      const { col, row, absoluteCol, absoluteRow } = this.parseAddressWithAbsolute(cellRef);
+      return {
+        type: 'ref',
+        address: toCellAddress(cellRef),
+        absolute: { col: absoluteCol, row: absoluteRow }
+      };
+    }
+
+    // Function calls
+    if (this.current.type === 'FUNCTION') {
+      const name = this.current.value;
+      this.advance();
+      return this.parseFunction(name);
+    }
+
+    throw new Error(`Unexpected token: ${this.current.type} (${this.current.value})`);
+  }
+
+  private parseAddressWithAbsolute(addr: string): {
+    col: number;
+    row: number;
+    absoluteCol: boolean;
+    absoluteRow: boolean;
+  } {
+    const match = addr.match(/^(\$?)([A-Z]+)(\$?)(\d+)$/);
+    if (!match) {
+      throw new Error(`Invalid cell address: ${addr}`);
+    }
+
+    const [, dollarCol, letters, dollarRow, rowStr] = match;
+    let col = 0;
+    for (let i = 0; i < letters.length; i++) {
+      col = col * 26 + (letters.charCodeAt(i) - 65 + 1);
+    }
+
+    return {
+      col: col - 1,
+      row: parseInt(rowStr) - 1,
+      absoluteCol: dollarCol === '$',
+      absoluteRow: dollarRow === '$'
+    };
   }
 
   private parseFunction(name: string): FormulaAst {
-    // TODO: Parse function arguments
-    throw new Error('Not implemented');
+    this.expect('LPAREN');
+
+    const args: FormulaAst[] = [];
+
+    // Handle empty function calls
+    if (this.current.type === 'RPAREN') {
+      this.advance();
+      return {
+        type: 'function',
+        name,
+        args
+      };
+    }
+
+    // Parse arguments
+    do {
+      args.push(this.parseExpression());
+
+      if (this.current.type === 'COMMA') {
+        this.advance();
+      } else {
+        break;
+      }
+    } while (this.current.type !== 'RPAREN' && this.current.type !== 'EOF');
+
+    this.expect('RPAREN');
+
+    return {
+      type: 'function',
+      name,
+      args
+    };
   }
 
   private advance(): void {
@@ -104,6 +414,8 @@ export const PRECEDENCE: Record<string, number> = {
 
 // Helper to parse a formula string
 export function parseFormula(input: string): FormulaAst {
-  const parser = new Parser(input);
+  // Remove leading = if present
+  const cleanInput = input.startsWith('=') ? input.slice(1) : input;
+  const parser = new Parser(cleanInput);
   return parser.parse();
 }
