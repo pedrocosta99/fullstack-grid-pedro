@@ -72,7 +72,7 @@ export default function HomePage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 002 2m0 0v10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
             </svg>
           </div>
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-neutral-900 via-primary-800 to-accent-700 bg-clip-text text-transparent mb-6">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-neutral-900 via-primary-800 to-accent-700 bg-clip-text text-transparent mb-6 py-2">
             TinyGrid
           </h1>
           <p className="text-xl text-neutral-600 max-w-2xl mx-auto leading-relaxed">
